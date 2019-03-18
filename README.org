@@ -1,0 +1,58 @@
+* cljaws
+
+This repo contains some AWS API calls for use with the Clojure shell, [[https://github.com/dundalek/closh][closh]].
+
+** Inspiration
+I have worked with UNIX shell for over two decades. My first real exposure to the shell was the Korn shell. Playing with different languages over the years, I had experimented with other people's implementation of the UNIX shell, including one for Perl, Python, Common Lisp, and Scheme. Most of these projects were ambitious projects to fully replace the UNIX shell.
+
+Then ~cloch~, the Clojure shell came along. I've just discovered the project, and am impressed with it, so far. Instead of totally replacing the shell, it relies on the shell to perform certain operations. Some things, the shell does very well, and replacing this functionality is a bit of duplication of work. The end result, is ~closh~ is very close to something I might be tempted to use as a replacement for my shell.
+
+~cljaws~ is a simple library that provides functions for querying AWS using[[https://github.com/cognitect-labs/aws-api][ Cognitect's AWS library]]. Cognitect's library is straight Clojure, no Java interop (at least in regards to Java's AWS SDK). It is data-driven, which means AWS requests and responses are just maps, according to the AWS documentation. This makes the library simple to use.
+
+The functions here, I admit, probably only serve me. But at the very least, it should incpire what is possible using a data-driven Lisp shell that allows interop with a far greater ecosystem.
+** What do you need?
+1. leiningen. Get it [[https://leiningen.org/][here]].
+2. Optionally [[https://github.com/dundalek/closh][closh]], but if you don't use it, this library has very limited value.
+** Usage
+
+1. Clone this repo and change into the root directory for the project
+   #+BEGIN_SRC sh
+   git clone https://github.com/timotheosh/cljaws.git cljaws && cd cljaws
+   #+END_SRC
+2. Build and install the library
+   #+BEGIN_SRC sh
+   lein install
+   #+END_SRC
+3. Edit your closhrc file in ~$HOME/.closhrc~ with the following:
+   #+BEGIN_SRC clojure
+   (require '[cemerick.pomegranate])
+   (cemerick.pomegranate/add-dependencies
+   :coordinates '[[cljaws "0.1.0-SNAPSHOT"]] ; or whichever version you end up installing.
+   :repositories (merge cemerick.pomegranate.aether/maven-central
+                        {"clojars" "https://clojars.org/repo"}))
+
+   (require '[cljaws.ec2 :as ec2]) ; You could use "use" instead, but I like avoiding namespace clashes.
+   #+END_SRC
+4. Then start up ~closh~ and you can query AWS (I've only .
+** License
+*** MIT License
+
+Copyright © 2019 Tim Hawes
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
