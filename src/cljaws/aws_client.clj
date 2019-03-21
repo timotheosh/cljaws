@@ -2,7 +2,8 @@
   (:require [clojure.java.io :as io]
             [clojure.walk :refer [keywordize-keys]]
             [cognitect.aws.client.api :as aws]
-            [cognitect.aws.credentials :as credentials]))
+            [cognitect.aws.credentials :as credentials]
+            [cljaws.sts :as sts]))
 
 (defn- error?
   "Checks the given result object, and returns the errors if there are any."
@@ -19,10 +20,10 @@
                                    (:Message (:Error error))))
         (:Error results)      (str (:Code (:Error results)) ": "
                                    (:Message (:Error results)))
-        :else {:Code "UndetectedErrorFormat" :Message results}))
+        :else (str {:Code "UndetectedErrorFormat" :Message results})))
 
 (defn create-client
-  "Creates an ec2 client, for the specified environment."
+  "Creates an AWS client, for the specified api and environment."
   ([api] (create-client api :dev "us-east-1"))
   ([api environment] (create-client api environment "us-east-1"))
   ([api environment region]
@@ -42,6 +43,8 @@
    (try
      (let [client (create-client api environment region)
            results (aws/invoke client request)]
-       (when (error? results)
-         (throw (Exception. (error-message results))))
-       results))))
+       (cond (sts/request-expired? results)  (do
+                                               (sts/update-token-file environment)
+                                               (awscli request environment region))
+             (error? results)  (throw (Exception. (error-message results))))
+       :else                   results))))
