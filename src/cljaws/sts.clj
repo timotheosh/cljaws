@@ -31,7 +31,7 @@
 (def default-region "us-east-1")
 
 ;; Not true iso format, but close enough.
-(def iso-format (new SimpleDateFormat "yyyy-MM-dd HH:mm+00:00"))
+(def iso-format (new SimpleDateFormat "yyyy-MM-dd HH:mm:ss+00:00"))
 (.setTimeZone iso-format (TimeZone/getTimeZone "UTC"))
 
 (defn- date->java
@@ -207,7 +207,8 @@
          now (System/currentTimeMillis)]
      (if (or (nil? expire)
              (<= expire now))
-       (update-token profile cred-file)
+       (do
+         (update-token profile cred-file))
        (do
          (change-active-profile profile cred-file)
          (println (str "Set Active Profile: " (colors/cyan profile) " Expires: "
