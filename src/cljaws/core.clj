@@ -23,10 +23,16 @@
     ((keyword profile) env->region)
     "us-east-1"))
 
+(defn get-profile
+  "Returns a profile when the profile specifies both an AWS credential
+  file profile and an abbreviated region."
+  [profile]
+  (first (clojure.string/split (name profile) #"-")))
+
 (defn get-ip
   "Returns a list of private IP's given a role."
   ([role] (get-ip role :default "us-east-1"))
-  ([role profile] (get-ip role profile (get-region profile)))
+  ([role profile] (get-ip role (get-profile profile) (get-region profile)))
   ([role profile region]
    (doseq [ip (ec2/get-ip (ec2/get-by-role role profile region))]
      (println ip))))

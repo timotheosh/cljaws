@@ -76,7 +76,9 @@
 (defn request-expired?
   "Returns true if the error message is due to RequestExpired or need to update session tokens."
   [results]
-  (= (:Code (:Error (:Errors (:Response results)))) "RequestExpired"))
+  (or
+   (= (:Code (:Error (:Errors (:Response results)))) "RequestExpired")
+   (= (:Code (:Error results)) "ExpiredToken")))
 
 (defn invalid-token?
   "Returns true if MFA entry was invalid."
@@ -92,7 +94,7 @@
 
 (defn- create-root-client
   "Root user account, contrary to the name, has very limited access."
-  ([api] (create-root-client api :dev default-region default-creds))
+  ([api] (create-root-client api :default default-region default-creds))
   ([api profile] (create-root-client api profile default-region default-creds))
   ([api profile region] (create-root-client api profile region default-creds))
   ([api profile region cred-file]
@@ -114,21 +116,20 @@
   "This creates AWS client using the user's static (and limited) AWS
   keys. We need this to query the serial numbers for registered MFA
   devices."
-  ([api request] (root-client-ops api request :dev default-region default-creds))
+  ([api request] (root-client-ops api request :default default-region default-creds))
   ([api request profile] (root-client-ops api request profile default-region default-creds))
   ([api request profile region] (root-client-ops api request profile region default-creds))
   ([api request profile region cred-file]
    (try
      (let [client (create-root-client api (name profile) region cred-file)
            results (aws/invoke client request)]
-       (when (error? results)
-         ;;(throw (Exception. (error-message results)))
-         results)
+       ;;(when (error? results)
+       ;;       (throw (Exception. (error-message results))))
        results))))
 
 (defn- get-mfa
   "Returns a list of registered MFA serial numbers."
-  ([] (get-mfa :dev default-region default-creds))
+  ([] (get-mfa :default default-region default-creds))
   ([profile] (get-mfa profile default-region default-creds))
   ([profile region] (get-mfa profile region default-creds))
   ([profile region cred-file]
@@ -136,7 +137,7 @@
 
 (defn- get-session-token
   "Returns the results from a session token request."
-  ([token] (get-session-token token :dev default-region default-creds))
+  ([token] (get-session-token token :default default-region default-creds))
   ([token profile] (get-session-token token profile default-region default-creds))
   ([token profile region] (get-session-token token profile region default-creds))
   ([token profile region cred-file]
@@ -150,6 +151,15 @@
         :SerialNumber mfa-serial
         :TokenCode token}}
       profile region cred-file))))
+
+(defn- invalid-data?
+  "Returns true ifd the returned data contains all the desired content."
+  [data]
+  (or (empty? (:AccessKeyId (:Credentials data)))
+      (empty? (:SecretAccessKey (:Credentials data)))
+      (empty? (:SessionToken (:Credentials data)))
+      (not= (type (:Expiration (:Credentials data))) java.util.Date)
+      (empty? (:SessionToken (:Credentials data)))))
 
 (defn- update-credentials-file
   "Updates the credentials file with the new ephemeral session token."
@@ -168,8 +178,7 @@
            (java->date (:Expiration (:Credentials data))))
      (.put ini-file sec "aws_security_token"
            (:SessionToken (:Credentials data)))
-     (.store ini-file)
-     (println ))))
+     (.store ini-file))))
 
 (defn- change-active-profile
   "Changes the 'active' profile, by making it the 'default'."
@@ -185,11 +194,13 @@
 (defn- update-token
   ([profile] (update-token profile default-creds))
   ([profile cred-file]
-   (print (str "[" (colors/cyan (name profile))  "]  AWS MFA Token: "))
+   ;; closh does not like print, have to use println.
+   (println (str "[" (colors/cyan (name profile))  "]  AWS MFA Token: "))
    (let [mfa-input (read-line)
          results (get-session-token mfa-input profile
                                     default-region cred-file)]
-     (if (invalid-token? results)
+     (if (or (invalid-token? results)
+             (invalid-data? results))
        (do
          (print (colors/red "Invalid MFA entry!.  "))
          (println (colors/cyan "Try again!"))

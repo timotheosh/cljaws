@@ -45,6 +45,6 @@
            results (aws/invoke client request)]
        (cond (sts/request-expired? results)  (do
                                                (sts/update-token-file environment)
-                                               (awscli request environment region))
-             (error? results)  (throw (Exception. (error-message results))))
-       :else                   results))))
+                                               (awscli api request environment region))
+             (error? results)  (throw (Exception. (error-message results)))
+             :else                   results)))))
