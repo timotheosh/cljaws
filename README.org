@@ -5,11 +5,11 @@ This repo contains some AWS API calls for use with the Clojure shell, [[https://
 ** Inspiration
 I have worked with UNIX shell for over two decades. My first real exposure to the shell was the Korn shell. Playing with different languages over the years, I had experimented with other people's implementation of the UNIX shell, including one for Perl, Python, Common Lisp, and Scheme. Most of these projects were ambitious projects to fully replace the UNIX shell.
 
-Then ~cloch~, the Clojure shell came along. I've just discovered the project, and am impressed with it, so far. Instead of totally replacing the shell, it relies on the shell to perform certain operations. Some things, the shell does very well, and replacing this functionality is a bit of duplication of work. The end result, is ~closh~ is very close to something I might be tempted to use as a replacement for my shell.
+Then ~closh~, the Clojure shell came along. I've just discovered the project, and am impressed with it, so far. Instead of totally replacing the shell, it relies on the shell to perform certain operations. Some things, the shell does very well, and replacing this functionality is a bit of duplication of work. The end result, is ~closh~ is very close to something I might be tempted to use as a replacement for my shell.
 
 ~cljaws~ is a simple library that provides functions for querying AWS using[[https://github.com/cognitect-labs/aws-api][ Cognitect's AWS library]]. Cognitect's library is straight Clojure, no Java interop (at least in regards to Java's AWS SDK). It is data-driven, which means AWS requests and responses are just maps, according to the AWS documentation. This makes the library simple to use.
 
-The functions here, I admit, probably only serve me. But at the very least, it should incpire what is possible using a data-driven Lisp shell that allows interop with a far greater ecosystem.
+The functions here, I admit, probably only serve me. But at the very least, it should inspire what is possible using a data-driven Lisp shell that allows interop with a far greater ecosystem.
 ** What do you need?
 1. leiningen. Get it [[https://leiningen.org/][here]].
 2. Optionally [[https://github.com/dundalek/closh][closh]], but if you don't use it, this library has very limited value.
