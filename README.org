@@ -34,6 +34,8 @@ The functions here, I admit, probably only serve me. But at the very least, it s
    (require '[cljaws.ec2 :as ec2]) ; You could use "use" instead, but I like avoiding namespace clashes.
    #+END_SRC
 4. Then start up ~closh~ and you can query AWS (I've only some ec2 functions I use a lot on a daily basis).
+
+There is an example closhrc file in doc/closhrc
 ** License
 *** MIT License
 

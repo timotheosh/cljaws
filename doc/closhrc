@@ -1,0 +1,29 @@
+;;-*- clojure -*-
+(require '[cemerick.pomegranate])
+(cemerick.pomegranate/add-dependencies
+ :coordinates '[[com.cognitect.aws/api       "0.8.273"]
+                [com.cognitect.aws/endpoints "1.1.11.507"]
+                [com.cognitect.aws/s3        "697.2.391.0"]
+                [com.cognitect.aws/ec2       "711.2.413.0"]
+                [com.cognitect.aws/cloudformation "697.2.391.0"]
+                [com.cognitect.aws/dynamodb  "697.2.391.0"]
+                [cljaws                      "0.3.0"]]
+ :repositories (merge cemerick.pomegranate.aether/maven-central
+                      {"clojars" "https://clojars.org/repo"}))
+
+(require '[cognitect.aws.client.api :as aws]
+         '[cljaws.core :as cljaws]
+         '[cljaws.sts :as sts]
+         '[cljaws.aws-client :as aws-client])
+
+(defcmd ls [& args]
+  (eval (macroexpand `(sh "ls" "-F" "--color=tty" ~@args))))
+
+(defcmd get-ip [role profile]
+  (cljaws/get-ip role profile))
+
+(defcmd history []
+  (sh sqlite3 (str (getenv "HOME") "/.closh/closh.sqlite") "SELECT command FROM history ORDER BY id ASC" | cat))
+
+(defcmd update-token [profile]
+  (cljaws.sts/update-token-file profile))
