@@ -6,8 +6,7 @@
   (:import  [org.ini4j Ini
              Config]
             [java.text SimpleDateFormat]
-            [java.util TimeZone]
-            [java.time ZonedDateTime]))
+            [java.util TimeZone]))
 
 (comment "This handles generating AWS session tokens using a user's MFA
          device.  It assumes the user is an iam user who can list

@@ -1,6 +1,7 @@
 (ns cljaws.core
   (:require [cljaws.aws-client :as aws-client]
-            [cljaws.ec2 :as ec2]))
+            [cljaws.ec2 :as ec2]
+            [cljaws.datetime :as datetime]))
 
 (def env->region
   {:dev "us-east-1"
@@ -36,3 +37,18 @@
   ([role profile region]
    (doseq [ip (ec2/get-ip (ec2/get-by-role role profile region))]
      (println ip))))
+
+(defn get-snapshots
+  "Returns all snapshots with the given filters."
+  ([filters] (get-snapshots filters :default "us-east-1"))
+  ([filters environment] (get-snapshots filters environment "us-east-1"))
+  ([filters environment region]
+   (ec2/search-snapshots filters environment region)))
+
+(defn list-snapshots
+  "Returns a list of snapshot ids with the given tags older than given days."
+  ([filters days] (list-snapshots filters days :default "us-east-1"))
+  ([filters days environment] (list-snapshots filters days environment "us-east-1"))
+  ([filters days environment region]
+   (let [snaps (get-snapshots filters environment region)]
+     (map #(:SnapshotId %) (filter #(datetime/before? (:StartTime %) days) snaps)))))

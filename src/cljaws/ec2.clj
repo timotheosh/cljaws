@@ -1,5 +1,6 @@
 (ns cljaws.ec2
-  (:require [cljaws.aws-client :as aws-client]))
+  (:require [cljaws.aws-client :as aws-client]
+            [cljaws.datetime :as datetime]))
 
 (defn- ec2-search
   "Returns search results with a given operation and list of filters."
@@ -31,6 +32,14 @@
   ([filters environment region]
    (:NetworkInterfaces
     (ec2-search :DescribeNetworkInterfaces filters environment region))))
+
+(defn search-snapshots
+  "Returns a list of ebs snapshots given a list of filters."
+  ([filters] (search-eni filters :dev "us-east-1"))
+  ([filters environment] (search-eni filters environment "us=east-1"))
+  ([filters environment region]
+   (:Snapshots
+    (ec2-search :DescribeSnapshots filters environment region))))
 
 (defn search-ec2
   "Returns a list of ec2 instances given a list of filters."

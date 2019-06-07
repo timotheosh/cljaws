@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.walk :refer [keywordize-keys]]
             [cognitect.aws.client.api :as aws]
+            [cognitect.aws.client.api.async :as aws.async]
             [cognitect.aws.credentials :as credentials]
             [cljaws.sts :as sts]))
 
@@ -35,6 +36,19 @@
            :region region})]
      (aws/validate-requests client true)
      client)))
+
+(defn async
+  ([api request] (async api request :dev "us-east-1"))
+  ([api request environment] (async api request environment "us-east-1"))
+  ([api request environment region]
+   (try
+     (let [client (create-client api environment region)
+           results (aws.async/invoke client request)]
+       (cond (sts/request-expired? results)  (do
+                                               (sts/update-token-file environment)
+                                               (async api request environment region))
+             (error? results)  (throw (Exception. (error-message results)))
+             :else                   results)))))
 
 (defn awscli
   ([api request] (awscli api request :dev "us-east-1"))
