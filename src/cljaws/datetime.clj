@@ -22,6 +22,12 @@
   (when-not (nil? date-text)
     (.parse iso-format date-text)))
 
+(defn ymd->java
+  "Convert simple text date to java.util.Date"
+  [date-text]
+  (when-not (nil? date-text)
+    (.parse y-m-d-format date-text)))
+
 (defn java->date
   "Convert java.util.Date to text."
   [date]
@@ -60,3 +66,13 @@
   [date]
   (when date
     (.getTime date)))
+
+(defn date-before?
+  "Returns true if date1 is before date2"
+  [date1 date2]
+  (< (epoch date1) (epoch date2)))
+
+(defn date-after?
+  "Returns true if date1 is after date2"
+  [date1 date2]
+  (< (epoch date2) (epoch date1)))

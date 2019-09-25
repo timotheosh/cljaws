@@ -1,6 +1,19 @@
 (ns cljaws.ec2
-  (:require [cljaws.aws-client :as aws-client]
-            [cljaws.datetime :as datetime]))
+  (:require [clojure.string :as str]
+            [cognitect.aws.client.api :as aws]
+            [cljaws.aws-client :as aws-client]
+            [cljaws.datetime :as datetime]
+            [cljaws.config :refer [accountid get-env get-region]]))
+
+(defn get-all-instances
+  "Returns a list of all instances in a given region and environment."
+  ([] (get-all-instances :dev "us-east-1"))
+  ([environment] (get-all-instances environment "us-east-1"))
+  ([environment region]
+   (aws-client/awscli
+    :ec2
+    {:op :DescribeInstances}
+    environment region)))
 
 (defn- ec2-search
   "Returns search results with a given operation and list of filters."
@@ -61,7 +74,35 @@
          ((keyword data-key) (first (:Instances x))))
        (:Reservations search-results)))
 
+(defn get-roles
+  [search-results]
+  (map (fn [x]
+         (:Value
+          (first
+           (filter #(= (:Key %) "role")
+                   (:Tags (first (:Instances x)))))))
+       (:Reservations search-results)))
+
 (defn get-ip
   "Returns a list of private ip addresses from search results."
   [search-results]
   (get-data :PrivateIpAddress search-results))
+
+(defn get-all-snapshots
+  "Returns a list of an account's active snapshots"
+  ([] (get-all-snapshots :dev))
+  ([env]
+   (let [acc (accountid env)
+         snaps (:Snapshots
+                (aws-client/awscli :ec2 {:op :DescribeSnapshots}
+                                   (get-env env) (get-region env)))]
+     (filter #(= (:OwnerId %) acc) snaps))))
+
+(defn count-snaps
+  "Returns the number of snapshots in environment."
+  [env]
+  (let [acc (accountid env)
+        snaps (:Snapshots
+               (aws-client/awscli :ec2 {:op :DescribeSnapshots}
+                                  (get-env env) (get-region env)))]
+    (count (filter #(= (:OwnerId %) acc) snaps))))

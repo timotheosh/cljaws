@@ -52,3 +52,17 @@
   ([filters days environment region]
    (let [snaps (get-snapshots filters environment region)]
      (map #(:SnapshotId %) (filter #(datetime/before? (:StartTime %) days) snaps)))))
+
+(defn top-n
+  "Returns top n roles by instance count."
+  ([] (top-n :dev "us-east-1" 10))
+  ([environment] (top-n environment "us-east-1" 10))
+  ([environment region] (top-n environment region 10))
+  ([environment region num]
+   (let [all-instances (ec2/get-all-instances environment region)]
+     (doseq [[role count] (take
+                           num
+                           (reverse
+                            (sort-by val
+                                     (frequencies (ec2/get-roles all-instances)))))]
+       (println (str role "\t" count))))))

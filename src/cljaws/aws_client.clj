@@ -6,6 +6,8 @@
             [cognitect.aws.credentials :as credentials]
             [cljaws.sts :as sts]))
 
+(def ^{:dynamic true :private true} *client* nil)
+
 (defn- error?
   "Checks the given result object, and returns the errors if there are any."
   [results]
@@ -51,14 +53,18 @@
              :else                   results)))))
 
 (defn awscli
+  "Uses a dynamic binding for a client, creates a new client if it does
+  not yet exist."
   ([api request] (awscli api request :dev "us-east-1"))
   ([api request environment] (awscli api request environment "us-east-1"))
   ([api request environment region]
    (try
-     (let [client (create-client api environment region)
-           results (aws/invoke client request)]
-       (cond (sts/request-expired? results)  (do
-                                               (sts/update-token-file environment)
-                                               (awscli api request environment region))
-             (error? results)  (throw (Exception. (error-message results)))
-             :else                   results)))))
+     (if *client*
+       (let [results (aws/invoke *client* request)]
+         (cond (sts/request-expired? results)  (do
+                                                 (sts/update-token-file environment)
+                                                 (awscli api request environment region))
+               (error? results)  (throw (Exception. (error-message results)))
+               :else                   results))
+       (binding [*client* (create-client api environment region)]
+         (awscli api request environment region))))))
