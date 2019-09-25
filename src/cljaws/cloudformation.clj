@@ -4,6 +4,21 @@
             [cljaws.aws-client :as aws-client]
             [cljaws.config :refer [accountid get-env get-region]]))
 
+;; Many AWS API calls depend on others. For instance, if we wanted to
+;; get a list of resources for a Cloudformation stack, we have to know
+;; the stack name we want to get the list of resources for. If we
+;; wanted to find all stacks that reference a specific resource, we
+;; have to first get a list of all stacks, and then query each stack
+;; for a list of referenced resources, to see if the given stack
+;; references the resource. If we have 600 stacks, then this query
+;; will require 600 independent queries to AWS.
+;;
+;; We need to avoid getting rate limited, and we need to keep track of
+;; what stacks referenced the given resource.
+;;
+;; To do this, we use doseq, instead of map, and add items to a global
+;; atom until all the stacks have been queried, sleeping for half a
+;; second in between API calls, as to avoid getting rate limited.
 (def stacklist (atom []))
 
 (defn get-stack
@@ -64,10 +79,11 @@
   (some #(str/starts-with? % "AWS::OpsWorks")
         (map #(:ResourceType %) (get-stack-resources stack-name env))))
 
-(defn add-opsworks
-  "Modifies global atom, adding the stack-name if the stack references OpsWorks."
-  [env stack-name]
-  (when (has-opsworks? stack-name env)
+(defn add-stack
+  "Modifies global atom, adding the stack-name if the stack is true
+  according to the given predicate."
+  [pred env stack-name]
+  (when (pred stack-name env)
     (reset! stacklist (conj @stacklist stack-name))))
 
 (defn get-opsworks-stacks
@@ -76,7 +92,7 @@
   (reset! stacklist [])
   (binding [aws-client/*client* (aws-client/create-client :cloudformation env)]
     (let [stacks (get-all-stack-names env)]
-      (doseq-interval (partial add-opsworks env) stacks 500)))
+      (doseq-interval (partial add-stack has-opsworks? env) stacks 500)))
   @stacklist)
 
 (defn get-security-group
