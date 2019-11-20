@@ -33,8 +33,10 @@
   ([env next-token]
    (if next-token
      (aws-client/awscli :cloudformation {:op :DescribeStacks
-                                         :request {:NextToken next-token}})
-     (aws-client/awscli :cloudformation {:op :DescribeStacks}))))
+                                         :request {:NextToken next-token}}
+                        (get-env env) (get-region env))
+     (aws-client/awscli :cloudformation {:op :DescribeStacks}
+                        (get-env env) (get-region env)))))
 
 (defn get-all-stacks
   "Returns a list of all stacks."
@@ -90,7 +92,9 @@
   "Return a list of stacs that reference OpsWorks from a given vector of stacks."
   [env]
   (reset! stacklist [])
-  (binding [aws-client/*client* (aws-client/create-client :cloudformation env)]
+  (binding [aws-client/*client* (aws-client/create-client :cloudformation
+                                                          (get-env env)
+                                                          (get-region env))]
     (let [stacks (get-all-stack-names env)]
       (doseq-interval (partial add-stack has-opsworks? env) stacks 500)))
   @stacklist)
