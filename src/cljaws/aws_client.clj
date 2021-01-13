@@ -6,7 +6,7 @@
             [cognitect.aws.credentials :as credentials]
             [cljaws.sts :as sts]))
 
-(def ^{:dynamic true :private true} *client* nil)
+(def ^{:dynamic true :private false} *client* nil)
 
 (defn- error?
   "Checks the given result object, and returns the errors if there are any."
