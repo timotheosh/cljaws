@@ -5,7 +5,7 @@
 
 (defn load-edn
   "Loads edn file."
-  ([] (load-edn "/home/thawes/SpiderOak Hive/Work_Laptop/data/aws-accounts.edn"))
+  ([] (load-edn (str (System/getenv "HOME") "/.aws/aws-accounts.edn")))
   ([edn-path]
    (try
      (with-open [r (io/reader edn-path)]
