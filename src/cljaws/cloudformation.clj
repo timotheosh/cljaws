@@ -25,7 +25,8 @@
   ([cluster] (get-stack cluster "default"))
   ([cluster environment]
    (aws-client/awscli :cloudformation {:op :DescribeStacks
-                                       :request {:StackName cluster}})))
+                                       :request {:StackName cluster}}
+                      (get-env environment) (get-region environment))))
 
 (defn get-stacks
   "Single query to get a list of stacks."
