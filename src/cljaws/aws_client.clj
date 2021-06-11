@@ -25,30 +25,42 @@
                                    (:Message (:Error results)))
         :else (str {:Code "UndetectedErrorFormat" :Message results})))
 
+(defn- token-expired?
+  ([] (check-token :default "us-east-1"))
+  ([profile] (check-token profile "us-east-1"))
+  ([profile region]
+   (let [sts-client (aws/client {:api :sts
+                                 :credentials-provider
+                                 (credentials/profile-credentials-provider (name profile))
+                                 :region region})
+         results (aws/invoke sts-client {:op :GetCallerIdentity})]
+     (sts/request-expired? (:ErrorResponse results)))))
+
 (defn create-client
-  "Creates an AWS client, for the specified api and environment."
+  "Creates an AWS client, for the specified api and profile."
   ([api] (create-client api :dev "us-east-1"))
-  ([api environment] (create-client api environment "us-east-1"))
-  ([api environment region]
+  ([api profile] (create-client api profile "us-east-1"))
+  ([api profile region]
    (let [client
          (aws/client
           {:api (keyword api)
            :credentials-provider
-           (credentials/profile-credentials-provider (name environment))
+           (credentials/profile-credentials-provider (name profile))
            :region region})]
+
      (aws/validate-requests client true)
      client)))
 
 (defn async
   ([api request] (async api request :dev "us-east-1"))
-  ([api request environment] (async api request environment "us-east-1"))
-  ([api request environment region]
+  ([api request profile] (async api request profile "us-east-1"))
+  ([api request profile region]
    (try
-     (let [client (create-client api environment region)
+     (let [client (create-client api profile region)
            results (aws.async/invoke client request)]
        (cond (sts/request-expired? results)  (do
-                                               (sts/update-token-file environment)
-                                               (async api request environment region))
+                                               (sts/update-token-file profile)
+                                               (async api request profile region))
              (error? results)  (throw (Exception. (error-message results)))
              :else                   results)))))
 
@@ -56,15 +68,15 @@
   "Uses a dynamic binding for a client, creates a new client if it does
   not yet exist."
   ([api request] (awscli api request :dev "us-east-1"))
-  ([api request environment] (awscli api request environment "us-east-1"))
-  ([api request environment region]
+  ([api request profile] (awscli api request profile "us-east-1"))
+  ([api request profile region]
+   (when (token-expired? profile)
+     (sts/update-token-file profile))
    (try
      (if *client*
        (let [results (aws/invoke *client* request)]
-         (cond (sts/request-expired? results)  (do
-                                                 (sts/update-token-file environment)
-                                                 (awscli api request environment region))
-               (error? results)  (throw (Exception. (error-message results)))
-               :else                   results))
-       (binding [*client* (create-client api environment region)]
-         (awscli api request environment region))))))
+         (if (error? results)
+           (throw (Exception. (error-message results)))
+           results))
+       (binding [*client* (create-client api profile region)]
+         (awscli api request profile region))))))
