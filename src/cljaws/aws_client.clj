@@ -26,8 +26,8 @@
         :else (str {:Code "UndetectedErrorFormat" :Message results})))
 
 (defn- token-expired?
-  ([] (check-token :default "us-east-1"))
-  ([profile] (check-token profile "us-east-1"))
+  ([] (token-expired? :default "us-east-1"))
+  ([profile] (token-expired? profile "us-east-1"))
   ([profile region]
    (let [sts-client (aws/client {:api :sts
                                  :credentials-provider
