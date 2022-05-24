@@ -5,7 +5,7 @@
             [cljaws.config :refer [accountid get-env get-region]]))
 
 (defn get-stacks
-  "Returns all the opsworks stacks in given environment."
+  "Returns all the opsworks stacks in given habitat."
   [env]
   (into {}
         (map

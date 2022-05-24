@@ -41,25 +41,25 @@
 (defn get-snapshots
   "Returns all snapshots with the given filters."
   ([filters] (get-snapshots filters :default "us-east-1"))
-  ([filters environment] (get-snapshots filters environment "us-east-1"))
-  ([filters environment region]
-   (ec2/search-snapshots filters environment region)))
+  ([filters habitat] (get-snapshots filters habitat "us-east-1"))
+  ([filters habitat region]
+   (ec2/search-snapshots filters habitat region)))
 
 (defn list-snapshots
   "Returns a list of snapshot ids with the given tags older than given days."
   ([filters days] (list-snapshots filters days :default "us-east-1"))
-  ([filters days environment] (list-snapshots filters days environment "us-east-1"))
-  ([filters days environment region]
-   (let [snaps (get-snapshots filters environment region)]
+  ([filters days habitat] (list-snapshots filters days habitat "us-east-1"))
+  ([filters days habitat region]
+   (let [snaps (get-snapshots filters habitat region)]
      (map #(:SnapshotId %) (filter #(datetime/before? (:StartTime %) days) snaps)))))
 
 (defn top-n
   "Returns top n roles by instance count."
   ([] (top-n :dev "us-east-1" 10))
-  ([environment] (top-n environment "us-east-1" 10))
-  ([environment region] (top-n environment region 10))
-  ([environment region num]
-   (let [all-instances (ec2/get-all-instances environment region)]
+  ([habitat] (top-n habitat "us-east-1" 10))
+  ([habitat region] (top-n habitat region 10))
+  ([habitat region num]
+   (let [all-instances (ec2/get-all-instances habitat region)]
      (doseq [[role count] (take
                            num
                            (reverse

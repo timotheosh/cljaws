@@ -24,12 +24,12 @@
     env))
 
 (defn accountid
-  "Returns the accountid of the given environment."
+  "Returns the accountid of the given habitat."
   [env]
   (:accountid ((get-env env) config)))
 
 (defn get-region
-  "Returns the region for a given environment"
+  "Returns the region for a given habitat"
   [env]
   (let [info (mapv keyword (str/split (name env) #"-"))]
     (if (> (count info) 1)

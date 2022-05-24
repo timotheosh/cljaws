@@ -100,13 +100,13 @@
       (doseq-interval (partial add-stack has-opsworks? env) stacks 500)))
   @stacklist)
 
-(defn get-security-group
-  ([cluster] (get-security-group cluster "MongoSecurityGroup" "default"))
-  ([cluster logical-resource-id environment]
-   (:PhysicalResourceId
-    (:StackResourceDetail
-     (aws-client/awscli
-      :cloudformation {:op :DescribeStackResource
-                       :request {:StackName cluster
-                                 :LogicalResourceId logical-resource-id}}
-      environment)))))
+(defn get-stack-resource
+  "Returns the stack resource of a given stack [stackname] that match logical-resource-id"
+  [logical-resource-id stackname habitat]
+  (:PhysicalResourceId
+   (:StackResourceDetail
+    (aws-client/awscli
+     :cloudformation {:op :DescribeStackResource
+                      :request {:StackName stackname
+                                :LogicalResourceId logical-resource-id}}
+     habitat))))
