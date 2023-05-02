@@ -41,7 +41,7 @@
 
 (defn get-all-stacks
   "Returns a list of all stacks."
-  ([] (get-all-stacks :dev))
+  ([] (get-all-stacks :default))
   ([env]
    (binding [aws-client/*client* (aws-client/create-client
                                   :cloudformation (get-env env) (get-region env))]
@@ -54,7 +54,7 @@
 
 (defn get-all-stack-names
   "Returns a list of all stack names"
-  ([] (get-all-stack-names :dev))
+  ([] (get-all-stack-names :default))
   ([env]
    (let [all-stacks (get-all-stacks env)]
      (mapv #(:StackName %) all-stacks))))

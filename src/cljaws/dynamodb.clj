@@ -6,7 +6,7 @@
 
 (defn scan-table
   "Returns a list of all items in a DynamoDB table"
-  ([table-name] (scan-table table-name :dev (get-region :dev)))
+  ([table-name] (scan-table table-name :default (get-region :default)))
   ([table-name environment] (scan-table table-name environment (get-region environment)))
   ([table-name environment region]
    (aws-client/awscli

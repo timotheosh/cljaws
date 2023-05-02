@@ -38,7 +38,7 @@
 
 (defn create-client
   "Creates an AWS client, for the specified api and profile."
-  ([api] (create-client api :dev "us-east-1"))
+  ([api] (create-client api :default "us-east-1"))
   ([api profile] (create-client api profile "us-east-1"))
   ([api profile region]
    (let [client
@@ -52,7 +52,7 @@
      client)))
 
 (defn async
-  ([api request] (async api request :dev "us-east-1"))
+  ([api request] (async api request :default "us-east-1"))
   ([api request profile] (async api request profile "us-east-1"))
   ([api request profile region]
    (try
@@ -67,7 +67,7 @@
 (defn awscli
   "Uses a dynamic binding for a client, creates a new client if it does
   not yet exist."
-  ([api request] (awscli api request :dev "us-east-1"))
+  ([api request] (awscli api request :default "us-east-1"))
   ([api request profile] (awscli api request profile "us-east-1"))
   ([api request profile region]
    (when (token-expired? profile)

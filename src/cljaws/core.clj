@@ -4,7 +4,7 @@
             [cljaws.datetime :as datetime]))
 
 (def env->region
-  {:dev "us-east-1"
+  {:default "us-east-1"
    :test "us-east-1"
    :prod "us-east-1"
    :prod-apse2 "ap-southeast-2"
@@ -55,7 +55,7 @@
 
 (defn top-n
   "Returns top n roles by instance count."
-  ([] (top-n :dev "us-east-1" 10))
+  ([] (top-n :default "us-east-1" 10))
   ([environment] (top-n environment "us-east-1" 10))
   ([environment region] (top-n environment region 10))
   ([environment region num]
