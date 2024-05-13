@@ -1,4 +1,4 @@
-(defproject timotheosh/cljaws "0.3.9-SNAPSHOT"
+(defproject timotheosh/cljaws "0.4.0-SNAPSHOT"
   :description "Convenience functions for interacting with AWS API's from closh"
   :url "https://github.com/timotheosh/cljaws"
   :license {:name "MIT"
@@ -22,5 +22,5 @@
                  [com.cognitect.aws/service-quotas        "847.2.1365.0"]
                  [org.clojure/java.jdbc                   "0.7.12"]
                  [org.xerial/sqlite-jdbc                  "3.45.1.0"]
-                 [org.clojure/data.csv                    "1.0.1"]]
+                 [org.clojure/data.csv                    "1.1.0"]]
   :repl-options {:init-ns cljaws.core})

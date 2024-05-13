@@ -58,9 +58,7 @@
    (try
      (let [client (create-client api profile region)
            results (aws.async/invoke client request)]
-       (cond (sts/request-expired? results)  (do
-                                               (sts/update-token-file profile)
-                                               (async api request profile region))
+       (cond (sts/request-expired? results)   (throw (.Exception "Your AWS Token has expired!"))
              (error? results)  (throw (Exception. (error-message results)))
              :else                   results)))))
 
@@ -70,13 +68,13 @@
   ([api request] (awscli api request :default "us-east-1"))
   ([api request profile] (awscli api request profile "us-east-1"))
   ([api request profile region]
-   (when (token-expired? profile)
-     (sts/update-token-file profile))
-   (try
-     (if *client*
-       (let [results (aws/invoke *client* request)]
-         (if (error? results)
-           (throw (Exception. (error-message results)))
-           results))
-       (binding [*client* (create-client api profile region)]
-         (awscli api request profile region))))))
+   (if (token-expired? profile)
+     (throw (.Exception "Your AWS Token has expired!"))
+     (try
+       (if *client*
+         (let [results (aws/invoke *client* request)]
+           (if (error? results)
+             (throw (Exception. (error-message results)))
+             results))
+         (binding [*client* (create-client api profile region)]
+           (awscli api request profile region)))))))

@@ -61,12 +61,13 @@
 
 (defn get-stack-resources
   "Returns stack resources as a list."
-  [stack-name env]
-  (:StackResourceSummaries
-   (aws-client/awscli :cloudformation
-                      {:op :ListStackResources
-                       :request
-                       {:StackName stack-name}} (get-env env) (get-region env))))
+  ([stack-name] (get-stack-resources stack-name "us-east-1"))
+  ([stack-name region]
+   (:StackResourceSummaries
+    (aws-client/awscli :cloudformation
+                       {:op :ListStackResources
+                        :request
+                        {:StackName stack-name}} :default region))))
 
 (defn- doseq-interval
   "doseq with an interval. Typical usage is to slow down AWS API calls
