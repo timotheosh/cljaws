@@ -23,4 +23,10 @@
                  [org.clojure/java.jdbc                   "0.7.12"]
                  [org.xerial/sqlite-jdbc                  "3.45.1.0"]
                  [org.clojure/data.csv                    "1.1.0"]]
-  :repl-options {:init-ns cljaws.core})
+  :repl-options {:init-ns cljaws.core}
+  :deploy-repositories [["releases" {:url "https://clojars.org/timotheosh/cljaws"
+                                     :username :env/CLOJARS_USERNAME
+                                     :password :env/CLOJARS_PASSWORD}]
+                        ["snapshots" {:url "https://clojars.org/timotheosh/cljaws"
+                                      :username :env/CLOJARS_USERNAME
+                                      :password :env/CLOJARS_PASSWORD}]])

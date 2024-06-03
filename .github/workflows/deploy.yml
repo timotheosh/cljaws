@@ -7,10 +7,12 @@ on:
     branches: [ "master" ]
 
 jobs:
-  deployment:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v2
+
       - name: Deploy to Clojars
         env:
           CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
