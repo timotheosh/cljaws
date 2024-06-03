@@ -1,4 +1,4 @@
-(defproject timotheosh/cljaws "0.4.0-SNAPSHOT"
+(defproject timotheosh/cljaws "0.4.1-SNAPSHOT"
   :description "Convenience functions for interacting with AWS API's from closh"
   :url "https://github.com/timotheosh/cljaws"
   :license {:name "MIT"
@@ -24,9 +24,6 @@
                  [org.xerial/sqlite-jdbc                  "3.45.1.0"]
                  [org.clojure/data.csv                    "1.1.0"]]
   :repl-options {:init-ns cljaws.core}
-  :deploy-repositories [["releases" {:url "https://clojars.org/timotheosh/cljaws"
-                                     :username :env/CLOJARS_USERNAME
-                                     :password :env/CLOJARS_PASSWORD}]
-                        ["snapshots" {:url "https://clojars.org/timotheosh/cljaws"
-                                      :username :env/CLOJARS_USERNAME
-                                      :password :env/CLOJARS_PASSWORD}]])
+  :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
+                                     :username :env/clojars_username
+                                     :password :env/clojars_password}]])
