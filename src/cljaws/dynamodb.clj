@@ -1,7 +1,17 @@
 (ns cljaws.dynamodb
-  (:require [cognitect.aws.client.api :as aws]
+  (:require [clojure.spec.alpha :as s]
+            [cognitect.aws.client.api :as aws]
             [cljaws.aws-client :as aws-client]
             [cljaws.config :refer [get-env get-region]]))
+
+(def ^{:dynamic true :private false} *table-name* nil)
+
+(s/def :dynamodb/table-name string?)
+
+(defn- validate-table-name [table-name]
+  (if (s/valid? :dynamodb/table-name table-name)
+    table-name
+    (throw (ex-info "Invalid table-name" {:table-name table-name}))))
 
 (defn ->placeholder [attr]
   (clojure.string/replace (name attr) #"[^a-zA-Z0-9_]" "_"))
@@ -28,6 +38,7 @@
   ([table-name] (scan-table table-name :default (get-region :default)))
   ([table-name environment] (scan-table table-name environment (get-region environment)))
   ([table-name environment region]
+   (validate-table-name table-name)
    (aws-client/awscli
     :dynamodb
     {:op :Scan
@@ -37,6 +48,7 @@
 (defn format-put-item
   "Formats data for puting an item into the DynamoDB table."
   [table-name entity-type entity-id attributes]
+  (validate-table-name table-name)
   {:op      :PutItem
    :request {:TableName table-name
              :Item      (into {'entity-type {:S entity-type}
@@ -47,6 +59,7 @@
   "Formats data for updating an item in the DynamoDB table, allowing attribute additions, updates, and deletions."
   ([table-name entity-type entity-id updates] (format-update-item table-name entity-type entity-id updates nil))
   ([table-name entity-type entity-id updates removals]
+   (validate-table-name table-name)
    (let [update-sets (when (and updates (not (empty? updates)))
                        (str "SET " (clojure.string/join ", " (map (fn [[key _]] (str (->placeholder-name key) " = "
                                                                                      (->placeholder-value key))) updates))))
@@ -67,6 +80,7 @@
 (defn format-delete-item
   "Formats data for deleting an item from the DynamoDB table."
   [table-name entity-type entity-id]
+  (validate-table-name table-name)
   {:op :DeleteItem
    :request {:TableName table-name
              :Key {:entity-type {:S entity-type}
@@ -74,10 +88,11 @@
 
 (defn put-item
   "Adds an item to the dynamodb table."
-  [entity-type entity-id resources]
-  (format-put-item db-table-name entity-type entity-id {:resources resources}))
+  ([entity-type entity-id resources] (put-item *table-name* entity-type entity-id resources))
+  ([table-name entity-type entity-id resources]
+   (format-put-item table-name entity-type entity-id {:resources resources})))
 
 (defn update-item
-  ([entity-type entity-id updates] (update-item entity-type entity-id updates nil))
-  ([entity-type entity-id updates removals]
-   (format-update-item db-table-name entity-type entity-id updates removals)))
+  ([entity-type entity-id updates removals] (update-item *table-name* entity-type entity-id updates nil))
+  ([table-name entity-type entity-id updates removals]
+   (format-update-item table-name entity-type entity-id updates removals)))
