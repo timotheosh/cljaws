@@ -24,6 +24,7 @@
                  [org.xerial/sqlite-jdbc                  "3.45.3.0"]
                  [org.clojure/data.csv                    "1.1.0"]]
   :repl-options {:init-ns cljaws.core}
+  :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.25.0"]]}}
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
-                                     :username :env/clojars_username
-                                     :password :env/clojars_password}]])
+                                    :username :env/clojars_username
+                                    :password :env/clojars_password}]])
