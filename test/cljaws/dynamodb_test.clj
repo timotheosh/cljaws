@@ -106,27 +106,27 @@
            (sut/format-update-item "jira-resource-manager" {:entity-type "group"} {:entity-id "Intern"}
                                    {:resources ["AWS SSO Dev" "AWS SSO Test" "Databricks"]} ["no-op"])))))
 
-(deftest test-format-put
-  (testing "Test format-put"
+(deftest test-format-batch-put
+  (testing "Test format-batch-put"
     (is (= {:PutRequest
             {:Item
              {"AccountId" {:S "key1"},
               "Email" {:S "john.doe@missing.persons"},
               "description" {:S "Something"},
               "resources" {:L [{:S "resource1"} {:S "resource2"}]}}}}
-           (sut/format-put {:pk {:AccountId "key1"}
-                            :sk {:Email "john.doe@missing.persons"}
-                            :attributes {:description "Something"
-                                         :resources ["resource1" "resource2"]}})))))
+           (sut/format-batch-put {:pk {:AccountId "key1"}
+                                  :sk {:Email "john.doe@missing.persons"}
+                                  :attributes {:description "Something"
+                                               :resources ["resource1" "resource2"]}})))))
 
-(deftest test-format-delete
-  (testing "Test format-delete"
+(deftest test-format-batch-delete
+  (testing "Test format-batch-delete"
     (is (= {:DeleteRequest {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}
-           (sut/format-delete {:pk {:AccountId "jfdjd"}
-                               :sk {:Email "foo@bar.com"}})))))
+           (sut/format-batch-delete {:pk {:AccountId "jfdjd"}
+                                     :sk {:Email "foo@bar.com"}})))))
 
-(deftest test-format-operations
-  (testing "Test format-operations"
+(deftest test-format-batch-operations
+  (testing "Test format-batch-operations"
     (is (= [{:PutRequest
              {:Item
               {"description" {:S "Something"},
@@ -134,12 +134,12 @@
                "AccountId" {:S "key1"},
                "Email" {:S "john.doe@missing.persons"}}}}
             {:DeleteRequest {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}]
-           (sut/format-operations {:put [{:pk {:AccountId "key1"}
-                                          :sk {:Email "john.doe@missing.persons"}
-                                          :attributes {:description "Something"
-                                                       :resources ["resource1" "resource2"]}}]
-                                   :delete [{:pk {:AccountId "jfdjd"}
-                                             :sk {:Email "foo@bar.com"}}]})))))
+           (sut/format-batch-operations {:put [{:pk {:AccountId "key1"}
+                                                :sk {:Email "john.doe@missing.persons"}
+                                                :attributes {:description "Something"
+                                                             :resources ["resource1" "resource2"]}}]
+                                         :delete [{:pk {:AccountId "jfdjd"}
+                                                   :sk {:Email "foo@bar.com"}}]})))))
 
 (deftest test-format-batch-write
   (testing "Multiple tables with put and delete items."
