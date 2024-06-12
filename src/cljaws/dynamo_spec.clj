@@ -1,0 +1,2 @@
+(ns cljaws.dynamo-spec)
+

@@ -90,6 +90,42 @@
                         :ExpressionAttributeNames expr-attr-nams}
                  expr-attr-vals (assoc :ExpressionAttributeValues expr-attr-vals))})))
 
+(defn format-put
+  "Formats a put item for DynamoDB."
+  [item]
+  (let [keys (merge (:pk item) (:sk item))
+        formatted-item (into {}
+                             (concat
+                              (map (fn [[k v]] [(name k) (format-value v)]) keys)
+                              (map (fn [[k v]] [(name k) (format-value v)]) (:attributes item))))]
+    {:PutRequest {:Item formatted-item}}))
+
+(defn format-delete
+  "Formats a delete item for DynamoDB."
+  [item]
+  (let [key-map (into {}
+                      (map (fn [[k v]] [(name k) (format-value v)])
+                           (merge (:pk item) (:sk item))))]
+    (doseq [[k v] (merge (:pk item) (:sk item))]
+      (validate-key v))
+    {:DeleteRequest {:Key key-map}}))
+
+(defn format-operations
+  "Formats the operations (put and delete) for DynamoDB."
+  [ops]
+  (let [put-requests (mapv format-put (get ops :put []))
+        delete-requests (mapv format-delete (get ops :delete []))]
+    (apply conj put-requests delete-requests)))
+
+(defn format-batch-write
+  "Formats data for a batch write operation in DynamoDB, supporting both put and delete operations, grouped by table."
+  [requests]
+  {:op :BatchWriteItem
+   :request {:RequestItems (into {}
+                                 (mapv (fn [[table-name ops]]
+                                         [table-name (format-operations ops)])
+                                       requests))}})
+
 (defn scan-table
   "Returns a list of all items in a DynamoDB table"
   ([table-name] (scan-table table-name :default (get-region :default)))
@@ -121,3 +157,53 @@
   ([entity-type entity-id updates removals] (update-item *table-name* entity-type entity-id updates nil))
   ([table-name entity-type entity-id updates removals]
    (format-update-item table-name entity-type entity-id updates removals)))
+
+(defn batch-write
+  "Batch write operations can span multiple tables."
+  [requests]
+  )
+
+
+(comment
+  (def r
+    {:jira-account-map
+     {:put [{:pk {:AccountId "key1"}
+             :sk {:Email "john.doe@missing.persons"}
+             :description "Something"
+             :resources ["resource1" "resource2"]}]
+      :delete [{:pk {:AccountId "jfdjd"}
+                :sk {:Email "foo@bar.com"}}]}
+     :jira-resource-manager
+     {:put [{:pk {:entity-type "resource"} :sk {:entity-id "New Relic"}
+             :attributes {:okta-group-ids ["yetAnotherGroupId"]}}
+            {:pk {:entity-type "resource"} :sk {:entity-id "Odin"}
+             :attibutes {:okta-group-ids ["andAnotherGroupId"]}}]
+      :delete [{:pk {:entity-type "resource"} :sk {:entity-id "Databricks"}}]}}
+    )
+
+  (def q
+    {:op :BatchWriteItem,
+     :request
+     {:RequestItems
+      {"jira-account-map"
+       [{:PutRequest
+         {:Item
+          {"description" {:S "Something"},
+           "resources" {:L [{:S "resource1"} {:S "resource2"}]},
+           "AccountId" {:S "key1"},
+           "Email" {:S "john.doe@missing.persons"}}}}
+        {:DeleteRequest {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}],
+       "jira-resource-manager"
+       [{:PutRequest
+         {:Item
+          {"entity-type" {:S "resource"},
+           "entity-id" {:S "New Relic"}
+           "okta-group-ids" {:L [{:S "yetAnotherGroupId"}]}}}}
+        {:PutRequest
+         {:Item
+          {"entity-type" {:S "resource"},
+           "entity-id" {:S "Odin"}
+           "okta-group-ids" {:L [{:S "andAnotherGroupId"}]}}}}
+        {:DeleteRequest {:Key {"entity-type" {:S "resource"} "entity-id" {:S "Databricks"}}}}]}}})
+
+  )

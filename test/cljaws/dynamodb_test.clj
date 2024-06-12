@@ -105,3 +105,73 @@
               {:L [{:S "AWS SSO Dev"} {:S "AWS SSO Test"} {:S "Databricks"}]}}}}
            (sut/format-update-item "jira-resource-manager" {:entity-type "group"} {:entity-id "Intern"}
                                    {:resources ["AWS SSO Dev" "AWS SSO Test" "Databricks"]} ["no-op"])))))
+
+(deftest test-format-put
+  (testing "Test format-put"
+    (is (= {:PutRequest
+            {:Item
+             {"AccountId" {:S "key1"},
+              "Email" {:S "john.doe@missing.persons"},
+              "description" {:S "Something"},
+              "resources" {:L [{:S "resource1"} {:S "resource2"}]}}}}
+           (sut/format-put {:pk {:AccountId "key1"}
+                            :sk {:Email "john.doe@missing.persons"}
+                            :attributes {:description "Something"
+                                         :resources ["resource1" "resource2"]}})))))
+
+(deftest test-format-delete
+  (testing "Test format-delete"
+    (is (= {:DeleteRequest {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}
+           (sut/format-delete {:pk {:AccountId "jfdjd"}
+                               :sk {:Email "foo@bar.com"}})))))
+
+(deftest test-format-operations
+  (testing "Test format-operations"
+    (is (= [{:PutRequest
+             {:Item
+              {"description" {:S "Something"},
+               "resources" {:L [{:S "resource1"} {:S "resource2"}]},
+               "AccountId" {:S "key1"},
+               "Email" {:S "john.doe@missing.persons"}}}}
+            {:DeleteRequest {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}]
+           (sut/format-operations {:put [{:pk {:AccountId "key1"}
+                                          :sk {:Email "john.doe@missing.persons"}
+                                          :attributes {:description "Something"
+                                                       :resources ["resource1" "resource2"]}}]
+                                   :delete [{:pk {:AccountId "jfdjd"}
+                                             :sk {:Email "foo@bar.com"}}]})))))
+
+(deftest test-format-batch-write
+  (testing "Multiple tables with put and delete items."
+    (is (= {:op :BatchWriteItem,
+            :request
+            {:RequestItems
+             {:jira-account-map
+              [{:PutRequest
+                {:Item
+                 {"AccountId" {:S "key1"}, "Email" {:S "john.doe@missing.persons"}}}}
+               {:DeleteRequest
+                {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}],
+              :jira-resource-manager
+              [{:PutRequest
+                {:Item
+                 {"entity-type" {:S "resource"},
+                  "entity-id" {:S "New Relic"},
+                  "okta-group-ids" {:L [{:S "yetAnotherGroupId"}]}}}}
+               {:PutRequest
+                {:Item {"entity-type" {:S "resource"}, "entity-id" {:S "Odin"}}}}
+               {:DeleteRequest
+                {:Key {"entity-type" {:S "resource"}, "entity-id" {:S "Databricks"}}}}]}}}
+           (sut/format-batch-write {:jira-account-map
+                                    {:put [{:pk {:AccountId "key1"}
+                                            :sk {:Email "john.doe@missing.persons"}
+                                            :description "Something"
+                                            :resources ["resource1" "resource2"]}]
+                                     :delete [{:pk {:AccountId "jfdjd"}
+                                               :sk {:Email "foo@bar.com"}}]}
+                                    :jira-resource-manager
+                                    {:put [{:pk {:entity-type "resource"} :sk {:entity-id "New Relic"}
+                                            :attributes {:okta-group-ids ["yetAnotherGroupId"]}}
+                                           {:pk {:entity-type "resource"} :sk {:entity-id "Odin"}
+                                            :attibutes {:okta-group-ids ["andAnotherGroupId"]}}]
+                                     :delete [{:pk {:entity-type "resource"} :sk {:entity-id "Databricks"}}]}})))))
