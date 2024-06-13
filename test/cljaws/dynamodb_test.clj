@@ -105,3 +105,73 @@
               {:L [{:S "AWS SSO Dev"} {:S "AWS SSO Test"} {:S "Databricks"}]}}}}
            (sut/format-update-item "jira-resource-manager" {:entity-type "group"} {:entity-id "Intern"}
                                    {:resources ["AWS SSO Dev" "AWS SSO Test" "Databricks"]} ["no-op"])))))
+
+(deftest test-format-batch-put
+  (testing "Test format-batch-put"
+    (is (= {:PutRequest
+            {:Item
+             {"AccountId" {:S "key1"},
+              "Email" {:S "john.doe@missing.persons"},
+              "description" {:S "Something"},
+              "resources" {:L [{:S "resource1"} {:S "resource2"}]}}}}
+           (sut/format-batch-put {:pk {:AccountId "key1"}
+                                  :sk {:Email "john.doe@missing.persons"}
+                                  :attributes {:description "Something"
+                                               :resources ["resource1" "resource2"]}})))))
+
+(deftest test-format-batch-delete
+  (testing "Test format-batch-delete"
+    (is (= {:DeleteRequest {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}
+           (sut/format-batch-delete {:pk {:AccountId "jfdjd"}
+                                     :sk {:Email "foo@bar.com"}})))))
+
+(deftest test-format-batch-operations
+  (testing "Test format-batch-operations"
+    (is (= [{:PutRequest
+             {:Item
+              {"description" {:S "Something"},
+               "resources" {:L [{:S "resource1"} {:S "resource2"}]},
+               "AccountId" {:S "key1"},
+               "Email" {:S "john.doe@missing.persons"}}}}
+            {:DeleteRequest {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}]
+           (sut/format-batch-operations {:put [{:pk {:AccountId "key1"}
+                                                :sk {:Email "john.doe@missing.persons"}
+                                                :attributes {:description "Something"
+                                                             :resources ["resource1" "resource2"]}}]
+                                         :delete [{:pk {:AccountId "jfdjd"}
+                                                   :sk {:Email "foo@bar.com"}}]})))))
+
+(deftest test-format-batch-write
+  (testing "Multiple tables with put and delete items."
+    (is (= {:op :BatchWriteItem,
+            :request
+            {:RequestItems
+             {:jira-account-map
+              [{:PutRequest
+                {:Item
+                 {"AccountId" {:S "key1"}, "Email" {:S "john.doe@missing.persons"}}}}
+               {:DeleteRequest
+                {:Key {"AccountId" {:S "jfdjd"}, "Email" {:S "foo@bar.com"}}}}],
+              :jira-resource-manager
+              [{:PutRequest
+                {:Item
+                 {"entity-type" {:S "resource"},
+                  "entity-id" {:S "New Relic"},
+                  "okta-group-ids" {:L [{:S "yetAnotherGroupId"}]}}}}
+               {:PutRequest
+                {:Item {"entity-type" {:S "resource"}, "entity-id" {:S "Odin"}}}}
+               {:DeleteRequest
+                {:Key {"entity-type" {:S "resource"}, "entity-id" {:S "Databricks"}}}}]}}}
+           (sut/format-batch-write {:jira-account-map
+                                    {:put [{:pk {:AccountId "key1"}
+                                            :sk {:Email "john.doe@missing.persons"}
+                                            :description "Something"
+                                            :resources ["resource1" "resource2"]}]
+                                     :delete [{:pk {:AccountId "jfdjd"}
+                                               :sk {:Email "foo@bar.com"}}]}
+                                    :jira-resource-manager
+                                    {:put [{:pk {:entity-type "resource"} :sk {:entity-id "New Relic"}
+                                            :attributes {:okta-group-ids ["yetAnotherGroupId"]}}
+                                           {:pk {:entity-type "resource"} :sk {:entity-id "Odin"}
+                                            :attibutes {:okta-group-ids ["andAnotherGroupId"]}}]
+                                     :delete [{:pk {:entity-type "resource"} :sk {:entity-id "Databricks"}}]}})))))
