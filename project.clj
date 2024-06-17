@@ -1,4 +1,4 @@
-(defproject timotheosh/cljaws "0.5.2"
+(defproject timotheosh/cljaws "0.5.3-SNAPSHOT"
   :description "Convenience functions for interacting with AWS API's from closh"
   :url "https://github.com/timotheosh/cljaws"
   :license {:name "MIT"
