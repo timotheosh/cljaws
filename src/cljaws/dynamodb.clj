@@ -1,7 +1,7 @@
 (ns cljaws.dynamodb
   (:require [clojure.spec.alpha :as s]
             [cognitect.aws.client.api :as aws]
-            [cljaws.aws-client :refer [create-client awscli async *client*]]
+            [cljaws.aws-client :refer [create-client awscli async *client* error?]]
             [cljaws.config :refer [get-env get-region]]))
 
 (def ^{:dynamic true :private false} *table-name* nil)
@@ -50,7 +50,7 @@
 (defn ->placeholder-value [attr]
   (str ":" (->placeholder attr)))
 
-(defn format-value
+(defn map->typed
   "Takes a value and assigns the appropriate data type for dynamodb"
   [value]
   (cond
@@ -59,10 +59,40 @@
     (bytes? value) {:B value}
     (boolean? value) {:BOOL value}
     (nil? value) {:NULL true}
-    (map? value) {:M (into {} (map (fn [[k v]] [(name k) (format-value v)]) value))}
+    (map? value) {:M (into {} (map (fn [[k v]] [(name k) (map->typed v)]) value))}
     (set? value) {:SS (mapv str value)}
-    (vector? value) {:L (mapv format-value value)}
+    (vector? value) {:L (mapv map->typed value)}
     :else (throw (ex-info "Unsupported attribute type" {:value value}))))
+
+(defn typed->map
+  "Takes a DynamoDB typed value and converts it to the appropriate Clojure type"
+  [typed-value]
+  (cond
+    (map? typed-value)
+    (cond
+      (:S typed-value) (:S typed-value)
+      (:N typed-value) (read-string (:N typed-value))
+      (:B typed-value) (:B typed-value)
+      (:BOOL typed-value) (:BOOL typed-value)
+      (:NULL typed-value) nil
+      (:M typed-value) (into {} (map (fn [[k v]] [(keyword k) (typed->map v)]) (:M typed-value)))
+      (:L typed-value) (mapv typed->map (:L typed-value))
+      (:SS typed-value) (set (:SS typed-value))
+      (:NS typed-value) (set (map read-string (:NS typed-value)))
+      (:BS typed-value) (set (:BS typed-value))
+      :else (into {} (map (fn [[k v]] [(keyword k) (typed->map v)]) typed-value)))
+
+    ;; Directly handle collections
+    (vector? typed-value) (mapv typed->map typed-value)
+    (set? typed-value) (set (map typed->map typed-value))
+
+    ;; Handle direct values
+    (string? typed-value) typed-value
+    (number? typed-value) typed-value
+    (boolean? typed-value) typed-value
+    (nil? typed-value) nil
+
+    :else (throw (ex-info "Unsupported attribute type" {:typed-value typed-value}))))
 
 (defn format-put-item
   "Formats data for putting an item into the DynamoDB table. Supports optional sort key."
@@ -72,16 +102,16 @@
      (validate-key v))
    {:op      :PutItem
     :request {:TableName table-name
-              :Item      (into (into {} (map (fn [[k v]] [(name k) (format-value v)]) pk))
-                               (mapv (fn [[key value]] [(name key) (format-value value)]) attributes))}})
+              :Item      (into (into {} (map (fn [[k v]] [(name k) (map->typed v)]) pk))
+                               (mapv (fn [[key value]] [(name key) (map->typed value)]) attributes))}})
   ([table-name pk sk attributes]
    (validate-table-name table-name)
    (doseq [[k v] (merge pk sk)]
      (validate-key v))
    {:op      :PutItem
     :request {:TableName table-name
-              :Item      (into (into {} (map (fn [[k v]] [(name k) (format-value v)]) (merge pk sk)))
-                               (mapv (fn [[key value]] [(name key) (format-value value)]) attributes))}}))
+              :Item      (into (into {} (map (fn [[k v]] [(name k) (map->typed v)]) (merge pk sk)))
+                               (mapv (fn [[key value]] [(name key) (map->typed value)]) attributes))}}))
 
 (defn format-update-item
   "Formats data for updating an item in the DynamoDB table, allowing attribute additions, updates, and deletions."
@@ -99,11 +129,11 @@
          update-expr (clojure.string/trim (str update-sets (when (and update-sets remove-sets) " ") remove-sets))
          expr-attr-nams (into {} (concat (when updates (map (fn [[key _]] {(->placeholder-name key) (name key)}) updates))
                                          (when removals (map (fn [key] {(->placeholder-name key) (name key)}) removals))))
-         expr-attr-vals (when updates (into {} (map (fn [[key value]] {(->placeholder-value key) (format-value value)}) updates)))]
+         expr-attr-vals (when updates (into {} (map (fn [[key value]] {(->placeholder-value key) (map->typed value)}) updates)))]
      {:op :UpdateItem
       :request (cond-> {:TableName table-name
-                        :Key       (into {} (concat (map (fn [[k v]] [(name k) (format-value v)]) pk)
-                                                    (map (fn [[k v]] [(name k) (format-value v)]) (or sk {}))))
+                        :Key       (into {} (concat (map (fn [[k v]] [(name k) (map->typed v)]) pk)
+                                                    (map (fn [[k v]] [(name k) (map->typed v)]) (or sk {}))))
                         :UpdateExpression update-expr
                         :ExpressionAttributeNames expr-attr-nams}
                  expr-attr-vals (assoc :ExpressionAttributeValues expr-attr-vals))})))
@@ -114,15 +144,15 @@
   (let [keys (merge (:pk item) (:sk item))
         formatted-item (into {}
                              (concat
-                              (map (fn [[k v]] [(name k) (format-value v)]) keys)
-                              (map (fn [[k v]] [(name k) (format-value v)]) (:attributes item))))]
+                              (map (fn [[k v]] [(name k) (map->typed v)]) keys)
+                              (map (fn [[k v]] [(name k) (map->typed v)]) (:attributes item))))]
     {:PutRequest {:Item formatted-item}}))
 
 (defn format-batch-delete
   "Formats a delete item for DynamoDB."
   [item]
   (let [key-map (into {}
-                      (map (fn [[k v]] [(name k) (format-value v)])
+                      (map (fn [[k v]] [(name k) (map->typed v)])
                            (merge (:pk item) (:sk item))))]
     (doseq [[k v] (merge (:pk item) (:sk item))]
       (validate-key v))
@@ -150,11 +180,15 @@
   ([table-name environment] (scan-table table-name environment (get-region environment)))
   ([table-name environment region]
    (validate-table-name table-name)
-   (awscli
-    :dynamodb
-    {:op :Scan
-     :request {:TableName table-name}}
-    environment region)))
+   (try
+     (let [result (awscli
+                   :dynamodb
+                   {:op :Scan
+                    :request {:TableName table-name}}
+                   environment region)]
+       (when (error? result)
+         (throw (ex-info "Scan Error!" {:message result})))
+       (typed->map result)))))
 
 (defn put-item
   "Adds an item to the dynamodb table."

@@ -13,14 +13,23 @@
     (is (= ":customer_first_name") (sut/->placeholder-value "customer:first-name"))
     (is (= ":customer_first_name") (sut/->placeholder-value "customer=first name"))))
 
-(deftest test-format-name
-  (testing "Testing format-value"
-    (is (= {:M {"foo" {:S "bar"}, "baloo" {:S "bang"}, "num" {:N "34"}}} (sut/format-value {:foo "bar" :baloo "bang" :num 34})))
+(deftest test-map->typed
+  (testing "Testing map->typed"
+    (is (= {:M {"foo" {:S "bar"}, "baloo" {:S "bang"}, "num" {:N "34"}}} (sut/map->typed {:foo "bar" :baloo "bang" :num 34})))
     (is (= {:M
             {"entity-id" {:S "id35"},
              "entity-type" {:S "something"},
              "entity-data" {:L [{:M {"id" {:N "35"}, "name" {:S "foo"}}}]}}}
-           (sut/format-value {:entity-id "id35" :entity-type "something" :entity-data [{:id 35 :name "foo"}]})))))
+           (sut/map->typed {:entity-id "id35" :entity-type "something" :entity-data [{:id 35 :name "foo"}]})))))
+
+(deftest test-typed->map
+  (testing "Testing map->typed"
+    (is (= {:foo "bar" :baloo "bang" :num 34}  (sut/typed->map {:M {"foo" {:S "bar"}, "baloo" {:S "bang"}, "num" {:N "34"}}})))
+    (is (= {:entity-id "id35" :entity-type "something" :entity-data [{:id 35 :name "foo"}]}
+           (sut/typed->map {:M
+                            {"entity-id" {:S "id35"},
+                             "entity-type" {:S "something"},
+                             "entity-data" {:L [{:M {"id" {:N "35"}, "name" {:S "foo"}}}]}}})))))
 
 (deftest test-format-put-item
   (testing "Entries with just a primary key"
