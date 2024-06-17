@@ -53,46 +53,50 @@
 (defn map->typed
   "Takes a value and assigns the appropriate data type for dynamodb"
   [value]
-  (cond
-    (string? value) {:S value}
-    (number? value) {:N (str value)}
-    (bytes? value) {:B value}
-    (boolean? value) {:BOOL value}
-    (nil? value) {:NULL true}
-    (map? value) {:M (into {} (map (fn [[k v]] [(name k) (map->typed v)]) value))}
-    (set? value) {:SS (mapv str value)}
-    (vector? value) {:L (mapv map->typed value)}
-    :else (throw (ex-info "Unsupported attribute type" {:value value}))))
+  (try
+    (cond
+      (string? value) {:S value}
+      (number? value) {:N (str value)}
+      (bytes? value) {:B value}
+      (boolean? value) {:BOOL value}
+      (nil? value) {:NULL true}
+      (map? value) {:M (into {} (map (fn [[k v]] [(name k) (map->typed v)]) value))}
+      (set? value) {:SS (mapv str value)}
+      (vector? value) {:L (mapv map->typed value)}
+      :else (throw (ex-info "Unsupported attribute type" {:value value})))
+    (catch Exception err (ex-data err))))
 
 (defn typed->map
   "Takes a DynamoDB typed value and converts it to the appropriate Clojure type"
   [typed-value]
-  (cond
-    (map? typed-value)
+  (try
     (cond
-      (:S typed-value) (:S typed-value)
-      (:N typed-value) (read-string (:N typed-value))
-      (:B typed-value) (:B typed-value)
-      (:BOOL typed-value) (:BOOL typed-value)
-      (:NULL typed-value) nil
-      (:M typed-value) (into {} (map (fn [[k v]] [(keyword k) (typed->map v)]) (:M typed-value)))
-      (:L typed-value) (mapv typed->map (:L typed-value))
-      (:SS typed-value) (set (:SS typed-value))
-      (:NS typed-value) (set (map read-string (:NS typed-value)))
-      (:BS typed-value) (set (:BS typed-value))
-      :else (into {} (map (fn [[k v]] [(keyword k) (typed->map v)]) typed-value)))
+      (map? typed-value)
+      (cond
+        (:S typed-value) (:S typed-value)
+        (:N typed-value) (read-string (:N typed-value))
+        (:B typed-value) (:B typed-value)
+        (:BOOL typed-value) (:BOOL typed-value)
+        (:NULL typed-value) nil
+        (:M typed-value) (into {} (map (fn [[k v]] [(keyword k) (typed->map v)]) (:M typed-value)))
+        (:L typed-value) (mapv typed->map (:L typed-value))
+        (:SS typed-value) (set (:SS typed-value))
+        (:NS typed-value) (set (map read-string (:NS typed-value)))
+        (:BS typed-value) (set (:BS typed-value))
+        :else (into {} (map (fn [[k v]] [(keyword k) (typed->map v)]) typed-value)))
 
-    ;; Directly handle collections
-    (vector? typed-value) (mapv typed->map typed-value)
-    (set? typed-value) (set (map typed->map typed-value))
+      ;; Directly handle collections
+      (vector? typed-value) (mapv typed->map typed-value)
+      (set? typed-value) (set (map typed->map typed-value))
 
-    ;; Handle direct values
-    (string? typed-value) typed-value
-    (number? typed-value) typed-value
-    (boolean? typed-value) typed-value
-    (nil? typed-value) nil
+      ;; Handle direct values
+      (string? typed-value) typed-value
+      (number? typed-value) typed-value
+      (boolean? typed-value) typed-value
+      (nil? typed-value) nil
 
-    :else (throw (ex-info "Unsupported attribute type" {:typed-value typed-value}))))
+      :else (throw (ex-info "Unsupported attribute type" {:typed-value typed-value})))
+    (catch Exception err (ex-data err))))
 
 (defn format-put-item
   "Formats data for putting an item into the DynamoDB table. Supports optional sort key."
