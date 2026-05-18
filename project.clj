@@ -27,4 +27,5 @@
   :profiles {:dev {:plugins [[com.jakemccrary/lein-test-refresh "0.25.0"]]}}
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
                                     :username :env/clojars_username
-                                    :password :env/clojars_password}]])
+                                    :password :env/clojars_password
+                                    :sign-releases false}]])
