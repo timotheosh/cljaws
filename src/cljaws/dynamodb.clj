@@ -76,7 +76,7 @@
         (:S typed-value) (:S typed-value)
         (:N typed-value) (read-string (:N typed-value))
         (:B typed-value) (:B typed-value)
-        (:BOOL typed-value) (:BOOL typed-value)
+        (contains? typed-value :BOOL) (:BOOL typed-value)
         (:NULL typed-value) nil
         (:M typed-value) (into {} (map (fn [[k v]] [(keyword k) (typed->map v)]) (:M typed-value)))
         (:L typed-value) (mapv typed->map (:L typed-value))
